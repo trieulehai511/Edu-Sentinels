@@ -5,8 +5,11 @@ import com.chrollo_dev.EduSentinel.common.exception.ErrorCode;
 import com.chrollo_dev.EduSentinel.common.utils.SecurityUtils;
 import com.chrollo_dev.EduSentinel.modules.exam.entity.HomeWork;
 import com.chrollo_dev.EduSentinel.modules.exam.repositry.HomeWorkRepository;
+import com.chrollo_dev.EduSentinel.modules.submission.dto.SubmissionDetailResponse;
 import com.chrollo_dev.EduSentinel.modules.submission.dto.SubmissionRequest;
+import com.chrollo_dev.EduSentinel.modules.submission.dto.SubmissionResponse;
 import com.chrollo_dev.EduSentinel.modules.submission.entity.Submission;
+import com.chrollo_dev.EduSentinel.modules.submission.mapper.SubmissionMapper;
 import com.chrollo_dev.EduSentinel.modules.submission.repository.SubmissionRepository;
 import com.chrollo_dev.EduSentinel.modules.user.entity.User;
 import lombok.AccessLevel;
@@ -14,6 +17,7 @@ import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -23,9 +27,10 @@ import java.util.stream.Collectors;
 public class SubmissionService {
     HomeWorkRepository homeWorkRepository;
     SubmissionRepository submissionRepository;
+    SubmissionMapper submissionMapper;
     SecurityUtils securityUtils;
 
-    public Submission submitHomework(SubmissionRequest rq){
+    public SubmissionResponse submitHomework(SubmissionRequest rq){
         User user = securityUtils.getCurrentUser();
         HomeWork homeWork = homeWorkRepository.findById(rq.getHomeworkId()).orElseThrow(() ->  new AppException(ErrorCode.HOMEWORK_NOT_FOUND));
 
@@ -49,7 +54,25 @@ public class SubmissionService {
                 .studentAnswers(rq.getAnswers())
                 .score(totalScore)
                 .build();
+        return submissionMapper.toResponse( submissionRepository.save(submission));
+    }
 
-        return submissionRepository.save(submission);
+    public List<SubmissionResponse> getMySubmissions(){
+        User user = securityUtils.getCurrentUser();
+        List<Submission> submissions = submissionRepository.findAllByStudent_UsernameOrderByCreateAtDesc(user.getUsername());
+        return submissions.stream().map(submissionMapper::toResponse).collect(Collectors.toList());
+    }
+
+    public SubmissionDetailResponse getSubmissionDetail(String id) {
+
+        User currentUser = securityUtils.getCurrentUser();
+
+        Submission submission = submissionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy bài nộp"));
+
+        if (!submission.getStudent().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Bạn không có quyền xem kết quả bài thi này");
+        }
+        return submissionMapper.toDetailResponse(submission);
     }
 }
