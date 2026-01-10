@@ -4,6 +4,7 @@ package com.chrollo_dev.EduSentinel.modules.exam.controller;
 import com.chrollo_dev.EduSentinel.common.dto.APIResponse;
 import com.chrollo_dev.EduSentinel.modules.exam.dto.HomeworkDetailResponse;
 import com.chrollo_dev.EduSentinel.modules.exam.dto.HomeworkRequest;
+import com.chrollo_dev.EduSentinel.modules.exam.dto.HomeworkResponse;
 import com.chrollo_dev.EduSentinel.modules.exam.entity.HomeWork;
 import com.chrollo_dev.EduSentinel.modules.exam.service.HomeworkService;
 import jakarta.validation.Valid;
@@ -32,5 +33,13 @@ public class HomeworkController {
     @GetMapping("/{id}")
     APIResponse<HomeworkDetailResponse> getHomework(@PathVariable String id){
         return APIResponse.<HomeworkDetailResponse>builder().result(homeworkService.getHomeworkDetail(id)).build();
+    }
+    @GetMapping
+    public APIResponse<List<HomeworkResponse>> getAllHomeworks(
+            @RequestParam(required = false) String subjectId
+    ) {
+        return APIResponse.<List<HomeworkResponse>>builder()
+                .result(homeworkService.getAllHomeWorks(subjectId))
+                .build();
     }
 }

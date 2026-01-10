@@ -1,6 +1,7 @@
 package com.chrollo_dev.EduSentinel.modules.exam.mapper;
 
 import com.chrollo_dev.EduSentinel.modules.exam.dto.HomeworkDetailResponse;
+import com.chrollo_dev.EduSentinel.modules.exam.dto.HomeworkResponse;
 import com.chrollo_dev.EduSentinel.modules.exam.entity.HomeWork;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +25,18 @@ public class HomeworkMapper {
                         .build()
 
                 ).collect(Collectors.toList()))
+                .build();
+    }
+    public HomeworkResponse toHomeWorkResponse(HomeWork homework) {
+
+        if (homework == null) {
+            return null;
+        }
+        return HomeworkResponse.builder()
+                .id(homework.getId())
+                .title(homework.getTitle())
+                .subjectName(homework.getSubject().getName())
+                .subjectId(homework.getSubject().getId())
                 .build();
     }
 }
