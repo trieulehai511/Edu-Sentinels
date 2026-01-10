@@ -1,9 +1,13 @@
 package com.chrollo_dev.EduSentinel.modules.exam.service;
 
 
+import com.chrollo_dev.EduSentinel.common.exception.AppException;
+import com.chrollo_dev.EduSentinel.common.exception.ErrorCode;
+import com.chrollo_dev.EduSentinel.modules.exam.dto.HomeworkDetailResponse;
 import com.chrollo_dev.EduSentinel.modules.exam.dto.HomeworkRequest;
 import com.chrollo_dev.EduSentinel.modules.exam.entity.HomeWork;
 import com.chrollo_dev.EduSentinel.modules.exam.entity.Subject;
+import com.chrollo_dev.EduSentinel.modules.exam.mapper.HomeworkMapper;
 import com.chrollo_dev.EduSentinel.modules.exam.repositry.HomeWorkRepository;
 import com.chrollo_dev.EduSentinel.modules.exam.repositry.SubjectRepository;
 import lombok.AccessLevel;
@@ -17,7 +21,7 @@ import org.springframework.stereotype.Service;
 public class HomeworkService {
     HomeWorkRepository homeWorkRepository;
     SubjectRepository subjectRepository;
-
+    HomeworkMapper homeworkMapper;
     public HomeWork createHomework(HomeworkRequest rq) {
         Subject subject = subjectRepository.findById(rq.getSubjectId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy môn học với ID này"));
@@ -29,4 +33,21 @@ public class HomeworkService {
                 .build();
         return homeWorkRepository.save(homework);
     }
+    public HomeWork updateHomework(String homeworkId, HomeworkRequest rq) {
+        HomeWork homeWork = homeWorkRepository.findById(homeworkId).orElseThrow(()-> new AppException(ErrorCode.HOMEWORK_NOT_FOUND));
+
+        if(!homeWork.getSubject().getId().equals(rq.getSubjectId())) {
+            Subject newSubject = subjectRepository.findById(rq.getSubjectId()).orElseThrow(()-> new AppException(ErrorCode.SUBJECT_NOT_EXISTED));
+            homeWork.setSubject(newSubject);
+        }
+        homeWork.setTitle(rq.getTitle());
+        homeWork.setContent(rq.getContent());
+        return homeWorkRepository.save(homeWork);
+    }
+
+    public HomeworkDetailResponse getHomeworkDetail(String homeworkId) {
+        HomeWork homeWork = homeWorkRepository.findById(homeworkId).orElseThrow(()-> new AppException(ErrorCode.HOMEWORK_NOT_FOUND));
+        return homeworkMapper.toHomeworkDetailResponse(homeWork);
+    }
+
 }
