@@ -15,6 +15,7 @@ import com.chrollo_dev.EduSentinel.modules.user.entity.User;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,6 +30,7 @@ public class SubmissionService {
     SubmissionRepository submissionRepository;
     SubmissionMapper submissionMapper;
     SecurityUtils securityUtils;
+    SimpMessagingTemplate messagingTemplate;
 
     public SubmissionResponse submitHomework(SubmissionRequest rq){
         User user = securityUtils.getCurrentUser();
@@ -54,7 +56,10 @@ public class SubmissionService {
                 .studentAnswers(rq.getAnswers())
                 .score(totalScore)
                 .build();
-        return submissionMapper.toResponse( submissionRepository.save(submission));
+        Submission savedSubmission = submissionRepository.save(submission);
+        SubmissionResponse response = submissionMapper.toResponse(savedSubmission);
+        messagingTemplate.convertAndSend("/topic/homework/" + rq.getHomeworkId(),response);
+        return response;
     }
 
     public List<SubmissionResponse> getMySubmissions(){
@@ -77,6 +82,11 @@ public class SubmissionService {
     }
     public List<SubmissionResponse> getSubmissionsByHomework(String homeworkId) {
         List<Submission> submissions = submissionRepository.findAllByHomeWork_IdOrderByScoreDesc(homeworkId);
+        return submissions.stream().map(submissionMapper::toResponse).collect(Collectors.toList());
+    }
+    public List<SubmissionResponse> getSubmissionsByStudentId(String studentId) {
+        // Lấy tất cả bài nộp của học sinh này
+        List<Submission> submissions = submissionRepository.findAllByStudent_IdOrderByCreateAtDesc(studentId);
         return submissions.stream().map(submissionMapper::toResponse).collect(Collectors.toList());
     }
 }
