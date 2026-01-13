@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface SubmissionRepository  extends JpaRepository<Submission, String> {
     List<Submission> findAllByStudent_UsernameOrderByCreateAtDesc(String username);
+    List<Submission> findAllByHomeWork_IdOrderByScoreDesc(String homeworkId);
 }
