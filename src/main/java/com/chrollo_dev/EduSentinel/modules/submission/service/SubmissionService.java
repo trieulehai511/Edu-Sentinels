@@ -75,4 +75,8 @@ public class SubmissionService {
         }
         return submissionMapper.toDetailResponse(submission);
     }
+    public List<SubmissionResponse> getSubmissionsByHomework(String homeworkId) {
+        List<Submission> submissions = submissionRepository.findAllByHomeWork_IdOrderByScoreDesc(homeworkId);
+        return submissions.stream().map(submissionMapper::toResponse).collect(Collectors.toList());
+    }
 }

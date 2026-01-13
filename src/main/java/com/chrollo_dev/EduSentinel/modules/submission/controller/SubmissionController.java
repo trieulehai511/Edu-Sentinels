@@ -38,4 +38,11 @@ public class SubmissionController {
                 .result(submissionService.getSubmissionDetail(id))
                 .build();
     }
+
+    @GetMapping("/by-homework/{homeworkId}")
+    public APIResponse<List<SubmissionResponse>> getHomeworkSubmissions(@PathVariable String homeworkId) {
+        return APIResponse.<List<SubmissionResponse>>builder()
+                .result(submissionService.getSubmissionsByHomework(homeworkId))
+                .build();
+    }
 }
