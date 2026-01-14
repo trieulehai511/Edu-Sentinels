@@ -2,6 +2,10 @@ package com.chrollo_dev.EduSentinel.modules.user.controller;
 
 import com.chrollo_dev.EduSentinel.common.dto.APIResponse;
 import com.chrollo_dev.EduSentinel.common.utils.SecurityUtils;
+import com.chrollo_dev.EduSentinel.modules.exam.dto.HomeworkResponse;
+import com.chrollo_dev.EduSentinel.modules.exam.entity.HomeWork;
+import com.chrollo_dev.EduSentinel.modules.exam.mapper.HomeworkMapper;
+import com.chrollo_dev.EduSentinel.modules.exam.repositry.HomeWorkRepository;
 import com.chrollo_dev.EduSentinel.modules.submission.dto.SubmissionResponse;
 import com.chrollo_dev.EduSentinel.modules.submission.entity.Submission;
 import com.chrollo_dev.EduSentinel.modules.submission.mapper.SubmissionMapper;
@@ -36,7 +40,8 @@ public class GuardianController {
     private final SubmissionRepository submissionRepository;
     // private final SubmissionMapper submissionMapper; // Có thể bỏ nếu không dùng nữa
     private final ObjectMapper objectMapper;
-
+    private final HomeWorkRepository homeworkRepository;
+    private final HomeworkMapper homeworkMapper;
     // 1. Kết nối với con
     @PostMapping("/connect")
     public APIResponse<String> connectStudent(@RequestParam String studentUsername) {
@@ -140,6 +145,23 @@ public class GuardianController {
         System.out.println("4. Response built successfully");
 
         return APIResponse.<SubmissionResponse>builder()
+                .result(response)
+                .build();
+    }
+    @GetMapping("/homework/{homeworkId}")
+    public APIResponse<HomeworkResponse> getHomeworkForGuardian(@PathVariable String homeworkId) {
+        // 1. Lấy user hiện tại (Để đảm bảo đã login)
+        User guardian = securityUtils.getCurrentUser();
+
+        // 2. Tìm bài tập
+        HomeWork homework = homeworkRepository.findById(homeworkId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đề thi này!"));
+
+        // 3. Map sang DTO (Trong DTO này chứa content JSON có correctAnswer)
+        // Vì đây là API của Guardian, chúng ta trả về nguyên gốc (có đáp án)
+        HomeworkResponse response = homeworkMapper.toHomeWorkResponse(homework);
+
+        return APIResponse.<HomeworkResponse>builder()
                 .result(response)
                 .build();
     }
