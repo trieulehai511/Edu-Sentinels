@@ -13,10 +13,14 @@ import com.chrollo_dev.EduSentinel.modules.user.entity.User;
 import com.chrollo_dev.EduSentinel.modules.user.mapper.UserMapper;
 import com.chrollo_dev.EduSentinel.modules.user.repository.StudentGuardianRepository;
 import com.chrollo_dev.EduSentinel.modules.user.repository.UserRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -31,6 +35,7 @@ public class GuardianController {
     private final UserMapper userMapper;
     private final SubmissionRepository submissionRepository;
     private final SubmissionMapper submissionMapper;
+    private final ObjectMapper objectMapper;
 
     // 1. Kết nối với con (Nhập username của con)
     @PostMapping("/connect")
@@ -102,7 +107,20 @@ public class GuardianController {
                 .fullName(student.getFullName())
                 .email(student.getEmail())
                 .build();
+        List<Map<String, Object>> detailsList = new ArrayList<>();
 
+        try {
+            // Thử chuyển đổi từ String JSON sang List
+            if (submission.getStudentAnswers() != null) {
+                detailsList = objectMapper.readValue(
+                        submission.getStudentAnswers().toString(),
+                        new TypeReference<List<Map<String, Object>>>(){}
+                );
+            }
+        } catch (Exception e) {
+            System.out.println("Lỗi parse JSON: " + e.getMessage());
+            // Nếu lỗi thì để list rỗng hoặc xử lý tùy ý
+        }
         // Map thông tin bài nộp
         SubmissionResponse response = SubmissionResponse.builder()
                 .id(submission.getId())
@@ -110,7 +128,7 @@ public class GuardianController {
                 .submittedAt(submission.getCreateAt())
                 .homeworkTitle(submission.getHomeWork().getTitle())
                 .student(studentDto)
-
+                .details(detailsList)
                 .build();
 
         System.out.println("4. Response built successfully");
