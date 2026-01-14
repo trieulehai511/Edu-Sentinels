@@ -78,10 +78,14 @@ public class GuardianController {
     @GetMapping("/submission/{submissionId}")
     public APIResponse<SubmissionResponse> getSubmissionDetail(@PathVariable String submissionId) {
         User guardian = securityUtils.getCurrentUser();
+        System.out.println("1. Guardian: " + guardian.getUsername()); // Log debug
 
+        // 1. Tìm bài nộp
         Submission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy bài nộp này!"));
+        System.out.println("2. Found submission: " + submission.getId());
 
+        // 2. Check quyền
         User student = submission.getStudent();
         boolean isLinked = guardianRepository.existsByGuardian_UsernameAndStudent_Username(
                 guardian.getUsername(),
@@ -89,10 +93,30 @@ public class GuardianController {
         );
 
         if (!isLinked) {
-            throw new RuntimeException("Bạn không có quyền xem chi tiết bài thi này (Không phải con của bạn)!");
+            throw new RuntimeException("Bạn không có quyền xem bài này!");
         }
+        System.out.println("3. Auth check passed");
+        UserResponse studentDto = UserResponse.builder()
+                .id(student.getId())
+                .username(student.getUsername())
+                .fullName(student.getFullName())
+                .email(student.getEmail())
+                .build();
+
+        // Map thông tin bài nộp
+        SubmissionResponse response = SubmissionResponse.builder()
+                .id(submission.getId())
+                .score(submission.getScore())
+                .submittedAt(submission.getCreateAt())
+                .homeworkTitle(submission.getHomeWork().getTitle())
+                .student(studentDto)
+
+                .build();
+
+        System.out.println("4. Response built successfully");
+
         return APIResponse.<SubmissionResponse>builder()
-                .result(submissionMapper.toResponse(submission))
+                .result(response)
                 .build();
     }
 }
