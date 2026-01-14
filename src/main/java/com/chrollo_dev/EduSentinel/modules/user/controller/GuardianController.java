@@ -3,6 +3,9 @@ package com.chrollo_dev.EduSentinel.modules.user.controller;
 import com.chrollo_dev.EduSentinel.common.dto.APIResponse;
 import com.chrollo_dev.EduSentinel.common.utils.SecurityUtils;
 import com.chrollo_dev.EduSentinel.modules.submission.dto.SubmissionResponse;
+import com.chrollo_dev.EduSentinel.modules.submission.entity.Submission;
+import com.chrollo_dev.EduSentinel.modules.submission.mapper.SubmissionMapper;
+import com.chrollo_dev.EduSentinel.modules.submission.repository.SubmissionRepository;
 import com.chrollo_dev.EduSentinel.modules.submission.service.SubmissionService;
 import com.chrollo_dev.EduSentinel.modules.user.dto.UserResponse;
 import com.chrollo_dev.EduSentinel.modules.user.entity.StudentGuardian;
@@ -26,6 +29,8 @@ public class GuardianController {
     private final StudentGuardianRepository guardianRepository;
     private final SubmissionService submissionService;
     private final UserMapper userMapper;
+    private final SubmissionRepository submissionRepository;
+    private final SubmissionMapper submissionMapper;
 
     // 1. Kết nối với con (Nhập username của con)
     @PostMapping("/connect")
@@ -66,9 +71,28 @@ public class GuardianController {
     // 3. Lấy lịch sử điểm số của con
     @GetMapping("/student-history/{studentId}")
     public APIResponse<List<SubmissionResponse>> getChildHistory(@PathVariable String studentId) {
-        // Cần thêm hàm này vào SubmissionService như hướng dẫn bài trước
         return APIResponse.<List<SubmissionResponse>>builder()
                 .result(submissionService.getSubmissionsByStudentId(studentId))
+                .build();
+    }
+    @GetMapping("/submission/{submissionId}")
+    public APIResponse<SubmissionResponse> getSubmissionDetail(@PathVariable String submissionId) {
+        User guardian = securityUtils.getCurrentUser();
+
+        Submission submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy bài nộp này!"));
+
+        User student = submission.getStudent();
+        boolean isLinked = guardianRepository.existsByGuardian_UsernameAndStudent_Username(
+                guardian.getUsername(),
+                student.getUsername()
+        );
+
+        if (!isLinked) {
+            throw new RuntimeException("Bạn không có quyền xem chi tiết bài thi này (Không phải con của bạn)!");
+        }
+        return APIResponse.<SubmissionResponse>builder()
+                .result(submissionMapper.toResponse(submission))
                 .build();
     }
 }
