@@ -25,6 +25,6 @@ public class SubmissionDetailResponse {
         private String selectedOption;    // Học sinh chọn: "A"
         private String correctOption;     // Đáp án đúng: "B"
         private boolean isCorrect;        // Kết quả: false
-        private int score;                // Điểm câu này: 5
+        private Double score;                // Điểm câu này: 5
     }
 }

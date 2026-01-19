@@ -95,7 +95,6 @@ public class SubmissionService {
         return submissions.stream().map(submissionMapper::toResponse).collect(Collectors.toList());
     }
     public List<SubmissionResponse> getSubmissionsByStudentId(String studentId) {
-        // Lấy tất cả bài nộp của học sinh này
         List<Submission> submissions = submissionRepository.findAllByStudent_IdOrderByCreateAtDesc(studentId);
         return submissions.stream().map(submissionMapper::toResponse).collect(Collectors.toList());
     }
