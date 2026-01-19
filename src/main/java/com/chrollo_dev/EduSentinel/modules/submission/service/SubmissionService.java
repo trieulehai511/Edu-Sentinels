@@ -11,7 +11,9 @@ import com.chrollo_dev.EduSentinel.modules.submission.dto.SubmissionResponse;
 import com.chrollo_dev.EduSentinel.modules.submission.entity.Submission;
 import com.chrollo_dev.EduSentinel.modules.submission.mapper.SubmissionMapper;
 import com.chrollo_dev.EduSentinel.modules.submission.repository.SubmissionRepository;
+import com.chrollo_dev.EduSentinel.modules.user.entity.StudentGuardian;
 import com.chrollo_dev.EduSentinel.modules.user.entity.User;
+import com.chrollo_dev.EduSentinel.modules.user.repository.StudentGuardianRepository;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -31,7 +33,7 @@ public class SubmissionService {
     SubmissionMapper submissionMapper;
     SecurityUtils securityUtils;
     SimpMessagingTemplate messagingTemplate;
-
+    StudentGuardianRepository guardianRepository;
     public SubmissionResponse submitHomework(SubmissionRequest rq){
         User user = securityUtils.getCurrentUser();
         HomeWork homeWork = homeWorkRepository.findById(rq.getHomeworkId()).orElseThrow(() ->  new AppException(ErrorCode.HOMEWORK_NOT_FOUND));
@@ -58,7 +60,15 @@ public class SubmissionService {
                 .build();
         Submission savedSubmission = submissionRepository.save(submission);
         SubmissionResponse response = submissionMapper.toResponse(savedSubmission);
-        messagingTemplate.convertAndSend("/topic/homework/" + rq.getHomeworkId(),response);
+        List<StudentGuardian> guardians = guardianRepository.findAllByStudent_Id(user.getId());
+        for (StudentGuardian g : guardians) {
+            String guardianUsername = g.getGuardian().getUsername();
+            messagingTemplate.convertAndSendToUser(
+                    guardianUsername,
+                    "/queue/notifications",
+                    "Con bạn vừa nộp bài " + homeWork.getTitle() + " - Điểm: " + totalScore
+            );
+        }
         return response;
     }
 
@@ -85,7 +95,6 @@ public class SubmissionService {
         return submissions.stream().map(submissionMapper::toResponse).collect(Collectors.toList());
     }
     public List<SubmissionResponse> getSubmissionsByStudentId(String studentId) {
-        // Lấy tất cả bài nộp của học sinh này
         List<Submission> submissions = submissionRepository.findAllByStudent_IdOrderByCreateAtDesc(studentId);
         return submissions.stream().map(submissionMapper::toResponse).collect(Collectors.toList());
     }

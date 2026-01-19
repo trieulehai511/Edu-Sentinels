@@ -34,25 +34,31 @@ public class SubmissionMapper {
         HomeWork homework = submission.getHomeWork();
         List<Submission.StudentAnswer> studentAnswers = submission.getStudentAnswers();
 
+        double totalRawScore = homework.getContent().stream().mapToDouble(HomeWork.QuestionData::getScore).sum();
+
         Map<Integer, String> studentAnswerMap = studentAnswers.stream()
                 .collect(Collectors.toMap(Submission.StudentAnswer::getQuestionId, Submission.StudentAnswer::getSelectedOption));
 
         List<SubmissionDetailResponse.QuestionResult> details = new ArrayList<>();
 
         for (HomeWork.QuestionData question : homework.getContent()) {
-            String userSelected = studentAnswerMap.get(question.getId()); // Học sinh chọn gì?
-            String correctAnswer = question.getCorrectAnswer();           // Đáp án đúng là gì?
+            String userSelected = studentAnswerMap.get(question.getId());
+            String correctAnswer = question.getCorrectAnswer();
 
             boolean isCorrect = correctAnswer.equals(userSelected);
-
+            double realScore = 0;
+            if (totalRawScore > 0) {
+                realScore = (question.getScore() / totalRawScore) * 10;
+            }
+            realScore = Math.round(realScore * 100.0) / 100.0;
             details.add(SubmissionDetailResponse.QuestionResult.builder()
                     .questionId(question.getId())
                     .questionText(question.getQuestion())
                     .options(question.getOptions())
-                    .selectedOption(userSelected)   // Cái user chọn
-                    .correctOption(correctAnswer)   // Cái user nên chọn
-                    .isCorrect(isCorrect)           // Đúng hay sai
-                    .score(question.getScore())
+                    .selectedOption(userSelected)
+                    .correctOption(correctAnswer)
+                    .isCorrect(isCorrect)
+                    .score(realScore)
                     .build());
         }
 

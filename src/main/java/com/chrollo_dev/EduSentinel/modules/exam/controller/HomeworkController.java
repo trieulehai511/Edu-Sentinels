@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -35,11 +36,13 @@ public class HomeworkController {
         return APIResponse.<HomeworkDetailResponse>builder().result(homeworkService.getHomeworkDetail(id)).build();
     }
     @GetMapping
-    public APIResponse<List<HomeworkResponse>> getAllHomeworks(
-            @RequestParam(required = false) String subjectId
+    public APIResponse<Page<HomeworkResponse>> getAllHomeworks(
+            @RequestParam(required = false) String subjectId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
-        return APIResponse.<List<HomeworkResponse>>builder()
-                .result(homeworkService.getAllHomeWorks(subjectId))
+        return APIResponse.<Page<HomeworkResponse>>builder()
+                .result(homeworkService.getAllHomeWorks(subjectId, page, size))
                 .build();
     }
 }
