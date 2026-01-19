@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 @Data
 @Builder
@@ -15,7 +17,7 @@ public class SubmissionResponse {
     String id;
     Double score;
     LocalDateTime submittedAt;
-
+    List<Map<String, Object>> details;
     UserResponse student;
     String homeworkId;
     String homeworkTitle;

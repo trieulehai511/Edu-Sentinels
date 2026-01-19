@@ -3,12 +3,17 @@ package com.chrollo_dev.EduSentinel.modules.exam.mapper;
 import com.chrollo_dev.EduSentinel.modules.exam.dto.HomeworkDetailResponse;
 import com.chrollo_dev.EduSentinel.modules.exam.dto.HomeworkResponse;
 import com.chrollo_dev.EduSentinel.modules.exam.entity.HomeWork;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.Mapping;
 
 import java.util.stream.Collectors;
 
 @Component
+@RequiredArgsConstructor
 public class HomeworkMapper {
+    private final ObjectMapper objectMapper;
     public HomeworkDetailResponse toHomeworkDetailResponse(HomeWork homework) {
         if (homework == null) {
             return null;
@@ -28,15 +33,28 @@ public class HomeworkMapper {
                 .build();
     }
     public HomeworkResponse toHomeWorkResponse(HomeWork homework) {
-
         if (homework == null) {
             return null;
         }
+
+        String contentJson = null;
+        try {
+            // 👇 QUAN TRỌNG: Chuyển List Object (có đáp án) thành chuỗi JSON
+            if (homework.getContent() != null) {
+                contentJson = objectMapper.writeValueAsString(homework.getContent());
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi convert content sang JSON: " + e.getMessage());
+        }
+
         return HomeworkResponse.builder()
                 .id(homework.getId())
                 .title(homework.getTitle())
                 .subjectName(homework.getSubject().getName())
                 .subjectId(homework.getSubject().getId())
+
+                // 👇 GÁN CONTENT VÀO ĐÂY
+                .content(contentJson)
                 .build();
     }
 }

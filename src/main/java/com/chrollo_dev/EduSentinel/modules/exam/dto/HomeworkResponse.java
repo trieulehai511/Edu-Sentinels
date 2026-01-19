@@ -13,4 +13,5 @@ public class HomeworkResponse {
     String title;
     String subjectName;
     String subjectId;
+    String content;
 }
