@@ -11,7 +11,9 @@ import com.chrollo_dev.EduSentinel.modules.submission.dto.SubmissionResponse;
 import com.chrollo_dev.EduSentinel.modules.submission.entity.Submission;
 import com.chrollo_dev.EduSentinel.modules.submission.mapper.SubmissionMapper;
 import com.chrollo_dev.EduSentinel.modules.submission.repository.SubmissionRepository;
+import com.chrollo_dev.EduSentinel.modules.user.entity.StudentGuardian;
 import com.chrollo_dev.EduSentinel.modules.user.entity.User;
+import com.chrollo_dev.EduSentinel.modules.user.repository.StudentGuardianRepository;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -31,35 +33,63 @@ public class SubmissionService {
     SubmissionMapper submissionMapper;
     SecurityUtils securityUtils;
     SimpMessagingTemplate messagingTemplate;
-
-    public SubmissionResponse submitHomework(SubmissionRequest rq){
+    StudentGuardianRepository guardianRepository;
+    public SubmissionResponse submitHomework(SubmissionRequest rq) {
         User user = securityUtils.getCurrentUser();
-        HomeWork homeWork = homeWorkRepository.findById(rq.getHomeworkId()).orElseThrow(() ->  new AppException(ErrorCode.HOMEWORK_NOT_FOUND));
+        HomeWork homeWork = homeWorkRepository.findById(rq.getHomeworkId())
+                .orElseThrow(() -> new AppException(ErrorCode.HOMEWORK_NOT_FOUND));
 
+        // 1. Chuẩn bị Map để tra cứu nhanh (O(1))
         Map<Integer, String> correctAnswersMap = homeWork.getContent().stream()
                 .collect(Collectors.toMap(HomeWork.QuestionData::getId, HomeWork.QuestionData::getCorrectAnswer));
         Map<Integer, Integer> scoreMap = homeWork.getContent().stream()
                 .collect(Collectors.toMap(HomeWork.QuestionData::getId, HomeWork.QuestionData::getScore));
-        double totalScore = 0;
 
+        // 2. Tính điểm thô (Raw Score) - CHỈ TÍNH 1 LẦN DUY NHẤT
+        double studentRawScore = 0;
         for (Submission.StudentAnswer studentAns : rq.getAnswers()) {
             String correct = correctAnswersMap.get(studentAns.getQuestionId());
 
-            if (correct != null && correct.equals(studentAns.getSelectedOption())) {
-                totalScore += scoreMap.getOrDefault(studentAns.getQuestionId(), 0);
+            // Null check & So sánh an toàn
+            if (correct != null && correct.trim().equalsIgnoreCase(studentAns.getSelectedOption().trim())) {
+                studentRawScore += scoreMap.getOrDefault(studentAns.getQuestionId(), 0);
             }
         }
 
+        // 3. Tính tổng điểm Max của đề
+        double maxPossibleScore = homeWork.getContent().stream()
+                .mapToDouble(HomeWork.QuestionData::getScore)
+                .sum();
+
+        // 4. Quy đổi sang thang 10 (Normalize)
+        double finalScore = 0;
+        if (maxPossibleScore > 0) {
+            finalScore = (studentRawScore / maxPossibleScore) * 10;
+        }
+        // Làm tròn 2 chữ số thập phân
+        finalScore = Math.round(finalScore * 100.0) / 100.0;
+
+        // 5. Lưu xuống DB
         Submission submission = Submission.builder()
                 .homeWork(homeWork)
                 .student(user)
                 .studentAnswers(rq.getAnswers())
-                .score(totalScore)
+                .score(finalScore) // Lưu điểm hệ 10
                 .build();
         Submission savedSubmission = submissionRepository.save(submission);
-        SubmissionResponse response = submissionMapper.toResponse(savedSubmission);
-        messagingTemplate.convertAndSend("/topic/homework/" + rq.getHomeworkId(),response);
-        return response;
+
+        // 6. Gửi thông báo cho Phụ huynh
+        List<StudentGuardian> guardians = guardianRepository.findAllByStudent_Id(user.getId());
+        for (StudentGuardian g : guardians) {
+            String guardianUsername = g.getGuardian().getUsername();
+            messagingTemplate.convertAndSendToUser(
+                    guardianUsername,
+                    "/queue/notifications",
+                    "Con bạn vừa nộp bài " + homeWork.getTitle() + " - Điểm: " + finalScore + "/10"
+            );
+        }
+
+        return submissionMapper.toResponse(savedSubmission);
     }
 
     public List<SubmissionResponse> getMySubmissions(){
@@ -85,7 +115,6 @@ public class SubmissionService {
         return submissions.stream().map(submissionMapper::toResponse).collect(Collectors.toList());
     }
     public List<SubmissionResponse> getSubmissionsByStudentId(String studentId) {
-        // Lấy tất cả bài nộp của học sinh này
         List<Submission> submissions = submissionRepository.findAllByStudent_IdOrderByCreateAtDesc(studentId);
         return submissions.stream().map(submissionMapper::toResponse).collect(Collectors.toList());
     }

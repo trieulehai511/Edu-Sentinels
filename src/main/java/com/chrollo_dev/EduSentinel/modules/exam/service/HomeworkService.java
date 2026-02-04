@@ -14,6 +14,10 @@ import com.chrollo_dev.EduSentinel.modules.exam.repositry.SubjectRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -54,14 +58,17 @@ public class HomeworkService {
         return homeworkMapper.toHomeworkDetailResponse(homeWork);
     }
 
-    public List<HomeworkResponse> getAllHomeWorks(String subjectId){
-        List<HomeWork> homeWorks;
-        if(subjectId != null){
-            homeWorks = homeWorkRepository.findAllBySubject_Id(subjectId);
-        }else{
-            homeWorks = homeWorkRepository.findAll();
+    public Page<HomeworkResponse> getAllHomeWorks(String subjectId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createAt").descending());
+
+        Page<HomeWork> homeworkPage;
+
+        if (subjectId != null && !subjectId.isBlank()) {
+            homeworkPage = homeWorkRepository.findAllBySubjectIdWithSubject(subjectId, pageable);
+        } else {
+            homeworkPage = homeWorkRepository.findAllWithSubject(pageable);
         }
-        return homeWorks.stream().map(homeworkMapper::toHomeWorkResponse).collect(Collectors.toList());
+        return homeworkPage.map(homeworkMapper::toHomeWorkResponse);
     }
 
 }
